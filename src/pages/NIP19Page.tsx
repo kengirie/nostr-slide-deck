@@ -1,5 +1,6 @@
 import { nip19 } from 'nostr-tools';
-import { useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
+import { DECK_KIND } from '@/lib/deckEvent';
 import NotFound from './NotFound';
 
 export function NIP19Page() {
@@ -32,9 +33,13 @@ export function NIP19Page() {
       // AI agent should implement event view here
       return <div>Event placeholder</div>;
 
-    case 'naddr':
-      // AI agent should implement addressable event view here
-      return <div>Addressable event placeholder</div>;
+    case 'naddr': {
+      const { kind, pubkey, identifier } = decoded.data;
+      if (kind === DECK_KIND) {
+        return <Navigate to={`/${nip19.npubEncode(pubkey)}/${identifier}`} replace />;
+      }
+      return <NotFound />;
+    }
 
     default:
       return <NotFound />;

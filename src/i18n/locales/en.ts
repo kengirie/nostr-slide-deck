@@ -44,6 +44,15 @@ export const en = {
     tryAgain: 'Try another file',
     notPdf: 'That file is not a PDF',
   },
+  deck: {
+    notFoundTitle: 'Deck not found',
+    notFoundDesc: 'It may not have reached the relays yet — try again in a moment.',
+    downloadPdf: 'Download PDF',
+    pageCount: '{{count}} pages',
+    prevPage: 'Previous page',
+    nextPage: 'Next page',
+    fullscreen: 'Fullscreen',
+  },
   footer: {
     note: 'Your decks live on public relays and Blossom servers — portable, mirrorable, yours.',
     source: 'Source',

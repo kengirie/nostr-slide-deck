@@ -48,6 +48,15 @@ export const ja: Translation = {
     tryAgain: '別のファイルを試す',
     notPdf: 'PDFファイルではありません',
   },
+  deck: {
+    notFoundTitle: 'デッキが見つかりません',
+    notFoundDesc: 'リレーにまだ届いていない可能性があります。少し待って再読み込みしてください。',
+    downloadPdf: 'PDFをダウンロード',
+    pageCount: '全{{count}}ページ',
+    prevPage: '前のページ',
+    nextPage: '次のページ',
+    fullscreen: '全画面表示',
+  },
   footer: {
     note: 'スライドは公開リレーとBlossomサーバーに保存されます。運営に依存せず、持ち運べます。',
     source: 'ソースコード',

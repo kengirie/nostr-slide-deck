@@ -4,8 +4,15 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-sans: "IBM Plex Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  --color-seal: var(--seal);
+  --color-seal-foreground: var(--seal-foreground);
 
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
@@ -83,36 +90,44 @@
   }
 }
 
+/*
+ * Kamishibai palette — paper & ink.
+ * 紙 (paper) #FAF9F6 / 墨 (ink) #1C1A17 / 罫 (rule) #DCD9D2 / 朱 (seal vermilion) #D7381E.
+ * The vermilion is reserved for the seal mark, primary calls to action, and zaps.
+ */
 :root {
-  --radius: 0.75rem;
+  --radius: 0.25rem;
 
-  --background: hsl(0 0% 100%);
-  --foreground: hsl(222.2 84% 4.9%);
+  --background: #faf9f6;
+  --foreground: #1c1a17;
 
-  --card: hsl(0 0% 100%);
-  --card-foreground: hsl(222.2 84% 4.9%);
+  --card: #ffffff;
+  --card-foreground: #1c1a17;
 
-  --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(222.2 84% 4.9%);
+  --popover: #ffffff;
+  --popover-foreground: #1c1a17;
 
-  --primary: hsl(222.2 47.4% 11.2%);
-  --primary-foreground: hsl(210 40% 98%);
+  --primary: #1c1a17;
+  --primary-foreground: #faf9f6;
 
-  --secondary: hsl(210 40% 96.1%);
-  --secondary-foreground: hsl(222.2 47.4% 11.2%);
+  --secondary: #f0eee8;
+  --secondary-foreground: #1c1a17;
 
-  --muted: hsl(210 40% 96.1%);
-  --muted-foreground: hsl(215.4 16.3% 46.9%);
+  --muted: #f0eee8;
+  --muted-foreground: #6e6a63;
 
-  --accent: hsl(210 40% 96.1%);
-  --accent-foreground: hsl(222.2 47.4% 11.2%);
+  --accent: #f0eee8;
+  --accent-foreground: #1c1a17;
 
-  --destructive: hsl(0 84.2% 60.2%);
-  --destructive-foreground: hsl(210 40% 98%);
+  --destructive: #b3261e;
+  --destructive-foreground: #faf9f6;
 
-  --border: hsl(214.3 31.8% 91.4%);
-  --input: hsl(214.3 31.8% 91.4%);
-  --ring: hsl(222.2 84% 4.9%);
+  --seal: #d7381e;
+  --seal-foreground: #ffffff;
+
+  --border: #dcd9d2;
+  --input: #dcd9d2;
+  --ring: #d7381e;
 
   --chart-1: hsl(12 76% 61%);
   --chart-2: hsl(173 58% 39%);
@@ -130,34 +145,38 @@
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
 }
 
+/* Dark side — the ink side of the sheet. */
 .dark {
-  --background: hsl(222.2 84% 4.9%);
-  --foreground: hsl(210 40% 98%);
+  --background: #161411;
+  --foreground: #ece9e2;
 
-  --card: hsl(222.2 84% 4.9%);
-  --card-foreground: hsl(210 40% 98%);
+  --card: #1d1b17;
+  --card-foreground: #ece9e2;
 
-  --popover: hsl(222.2 84% 4.9%);
-  --popover-foreground: hsl(210 40% 98%);
+  --popover: #1d1b17;
+  --popover-foreground: #ece9e2;
 
-  --primary: hsl(210 40% 98%);
-  --primary-foreground: hsl(222.2 47.4% 11.2%);
+  --primary: #ece9e2;
+  --primary-foreground: #161411;
 
-  --secondary: hsl(217.2 32.6% 17.5%);
-  --secondary-foreground: hsl(210 40% 98%);
+  --secondary: #262420;
+  --secondary-foreground: #ece9e2;
 
-  --muted: hsl(217.2 32.6% 17.5%);
-  --muted-foreground: hsl(215 20.2% 65.1%);
+  --muted: #262420;
+  --muted-foreground: #98938a;
 
-  --accent: hsl(217.2 32.6% 17.5%);
-  --accent-foreground: hsl(210 40% 98%);
+  --accent: #262420;
+  --accent-foreground: #ece9e2;
 
-  --destructive: hsl(0 62.8% 30.6%);
-  --destructive-foreground: hsl(210 40% 98%);
+  --destructive: #e2574c;
+  --destructive-foreground: #161411;
 
-  --border: hsl(217.2 32.6% 17.5%);
-  --input: hsl(217.2 32.6% 17.5%);
-  --ring: hsl(212.7 26.8% 83.9%);
+  --seal: #e8543a;
+  --seal-foreground: #ffffff;
+
+  --border: #302d27;
+  --input: #302d27;
+  --ring: #e8543a;
 
   --chart-1: hsl(220 70% 50%);
   --chart-2: hsl(160 60% 45%);

@@ -1,11 +1,16 @@
 import { useState } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { Check, Copy, RotateCcw } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CropMarks } from '@/components/CropMarks';
+import { LoginArea } from '@/components/auth/LoginArea';
+import { SealMark } from '@/components/layout/SealMark';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import type { usePdfPages } from '@/hooks/usePdfPages';
-import { asciiSlug, randomDeckId } from '@/lib/deckId';
+import { usePublishDeck, type PublishResult } from '@/hooks/usePublishDeck';
+import { asciiSlug, isValidDeckId, randomDeckId } from '@/lib/deckId';
 import { cn } from '@/lib/utils';
 import { DeckMetadataForm, type DeckMetadata } from './DeckMetadataForm';
 
@@ -20,9 +25,49 @@ function folio(n: number): string {
   return String(n).padStart(2, '0');
 }
 
+function PublishSuccess({
+  result,
+  onNew,
+}: {
+  result: PublishResult;
+  onNew: () => void;
+}) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+  const naddrUrl = `${location.origin}/${result.naddr}`;
+
+  const copyNaddr = async () => {
+    await navigator.clipboard.writeText(naddrUrl);
+    setCopied(true);
+  };
+
+  return (
+    <section className="container flex flex-col items-center gap-6 py-24 text-center">
+      <SealMark className="size-14 text-2xl" />
+      <h1 className="font-display text-3xl font-bold">{t('publish.successTitle')}</h1>
+      <p className="max-w-md text-sm text-muted-foreground">{t('publish.successDesc')}</p>
+      <div className="flex flex-col items-center gap-3 sm:flex-row">
+        <Button asChild className="bg-seal text-seal-foreground hover:bg-seal/90">
+          <Link to={`/${result.npub}/${result.identifier}`}>{t('publish.openDeck')}</Link>
+        </Button>
+        <Button variant="outline" onClick={copyNaddr}>
+          {copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
+          {copied ? t('publish.copied') : t('publish.copyNaddr')}
+        </Button>
+      </div>
+      <Button variant="ghost" onClick={onNew}>
+        <RotateCcw className="size-4" aria-hidden />
+        {t('publish.publishAnother')}
+      </Button>
+    </section>
+  );
+}
+
 /** Render with a `key` derived from the file so state reseeds per file. */
 export function PublishSection({ pdf, onReset }: { pdf: PdfPages; onReset: () => void }) {
   const { t } = useTranslation();
+  const { user } = useCurrentUser();
+  const pub = usePublishDeck();
   const [selected, setSelected] = useState(1);
   const [slugTouched, setSlugTouched] = useState(false);
   const [meta, setMeta] = useState<DeckMetadata>(() => {
@@ -66,8 +111,33 @@ export function PublishSection({ pdf, onReset }: { pdf: PdfPages; onReset: () =>
     );
   }
 
+  if (pub.step === 'done' && pub.result) {
+    return (
+      <PublishSuccess
+        result={pub.result}
+        onNew={() => {
+          pub.reset();
+          onReset();
+        }}
+      />
+    );
+  }
+
   const current = pdf.previews.find((p) => p.pageNumber === selected) ?? pdf.previews[0];
   const total = pdf.previews.length;
+  const busy = pub.step === 'uploading' || pub.step === 'publishing';
+  const canPublish =
+    !busy &&
+    pdf.status === 'ready' &&
+    pdf.deck !== null &&
+    pdf.file !== null &&
+    meta.title.trim().length > 0 &&
+    isValidDeckId(meta.slug);
+
+  const handlePublish = () => {
+    if (!pdf.deck || !pdf.file) return;
+    pub.publish({ file: pdf.file, deck: pdf.deck, meta });
+  };
 
   return (
     <section className="container grid gap-10 py-10 lg:grid-cols-12 lg:gap-14">
@@ -81,11 +151,49 @@ export function PublishSection({ pdf, onReset }: { pdf: PdfPages; onReset: () =>
           />
         </div>
         <div className="mt-8 space-y-3">
-          <Button className="w-full bg-seal text-seal-foreground hover:bg-seal/90" disabled>
-            {t('publish.publishButton')}
-          </Button>
-          <p className="text-center text-xs text-muted-foreground">{t('publish.publishSoon')}</p>
-          <Button variant="ghost" className="w-full" onClick={onReset}>
+          {user ? (
+            <Button
+              className="w-full bg-seal text-seal-foreground hover:bg-seal/90"
+              disabled={!canPublish}
+              onClick={handlePublish}
+            >
+              {pub.step === 'error' ? t('publish.retry') : t('publish.publishButton')}
+            </Button>
+          ) : (
+            <div className="flex flex-col items-center gap-2 border border-dashed p-4">
+              <p className="text-center text-xs text-muted-foreground">
+                {t('publish.loginToPublish')}
+              </p>
+              <LoginArea />
+            </div>
+          )}
+
+          {pub.step === 'uploading' && (
+            <div className="space-y-2">
+              <p className="text-center font-mono text-xs text-muted-foreground">
+                {t('publish.uploading', { done: pub.uploaded, total: pub.totalUploads })}
+              </p>
+              <Progress value={(pub.uploaded / Math.max(pub.totalUploads, 1)) * 100} />
+            </div>
+          )}
+          {pub.step === 'publishing' && (
+            <p className="text-center font-mono text-xs text-muted-foreground">
+              {t('publish.publishing')}
+            </p>
+          )}
+          {pub.step === 'error' && (
+            <p className="text-center text-xs text-destructive">
+              {t('publish.publishFailed')}
+              {pub.error ? ` — ${pub.error}` : ''}
+            </p>
+          )}
+          {pub.failedServers.length > 0 && pub.step !== 'error' && (
+            <p className="text-center text-xs text-muted-foreground">
+              {t('publish.serverWarning', { servers: pub.failedServers.join(', ') })}
+            </p>
+          )}
+
+          <Button variant="ghost" className="w-full" onClick={onReset} disabled={busy}>
             <RotateCcw className="size-4" aria-hidden />
             {t('publish.startOver')}
           </Button>

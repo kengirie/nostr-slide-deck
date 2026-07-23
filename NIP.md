@@ -1,0 +1,67 @@
+# Slide Decks
+
+`draft` `optional`
+
+This document describes the event format used by [Kamishibai](https://github.com/kengirie/nostr-slide-deck) to publish presentation slide decks on Nostr.
+
+## Deck event (kind `35891`)
+
+A slide deck is an *addressable* event of kind `35891`. The combination `35891:<pubkey>:<d>` identifies a deck; publishing again with the same `d` replaces the deck (e.g. an updated version of the slides).
+
+The event records **both a URL and a SHA-256 hash for every file**. The URL says where the file currently lives; the hash says what the file is, so it can be retrieved from any [Blossom](https://github.com/hzrd149/blossom) server if the original goes away.
+
+### Tags
+
+| tag | required | description |
+|---|---|---|
+| `d` | yes | Deck identifier: `[a-z0-9-]`, max 13 characters (kept compatible with NIP-5A named-site identifiers) |
+| `title` | yes | Deck title |
+| `summary` | no | Short description (also mirrored in `content`) |
+| `image` | no | Thumbnail URL (first page, 1200×630) for share cards |
+| `published_at` | no | Unix seconds of first publication, kept stable across replacements |
+| `url` | yes | URL of the original PDF |
+| `x` | yes | SHA-256 of the PDF (lowercase hex) |
+| `m` | yes | MIME type of the original file (`application/pdf`) |
+| `size` | no | PDF size in bytes |
+| `imeta` | yes (≥1) | One per page image, **in page order** (NIP-92 variadic format): `url`, `x`, `m`, `dim` |
+| `t` | no | Hashtags for discovery |
+| `alt` | yes | NIP-31 human-readable fallback |
+
+Page order is the order of the `imeta` tags within the event.
+
+### Example
+
+```json
+{
+  "kind": 35891,
+  "content": "How to publish slides on Nostr.",
+  "tags": [
+    ["d", "nostr-slides"],
+    ["title", "Slides on Nostr"],
+    ["summary", "How to publish slides on Nostr."],
+    ["image", "https://npub1xxx.nosto.re/nostr-slides/thumb.webp"],
+    ["published_at", "1700000000"],
+    ["url", "https://blossom.example/6ba7...c9e1.pdf"],
+    ["x", "6ba7...c9e1"],
+    ["m", "application/pdf"],
+    ["size", "1048576"],
+    ["imeta", "url https://blossom.example/aa11...ff00.webp", "x aa11...ff00", "m image/webp", "dim 1600x900"],
+    ["imeta", "url https://blossom.example/bb22...ee11.webp", "x bb22...ee11", "m image/webp", "dim 1600x900"],
+    ["t", "nostr"],
+    ["alt", "Slide deck \"Slides on Nostr\" (2 pages), published with Kamishibai"]
+  ]
+}
+```
+
+## Interactions
+
+Standard NIPs are used as-is; nothing app-specific:
+
+- **Comments**: NIP-22 (kind 1111) replies referencing the deck's address
+- **Reactions**: NIP-25 targeting the deck event
+- **Zaps**: NIP-57 targeting the deck's `a` address
+- **App handler**: NIP-89 (kind 31990) announcing this app as a handler for kind 35891
+
+## Static mirror (nsite)
+
+At publish time the client also renders a static HTML viewer with Open Graph meta tags baked in and publishes it as an nsite (NIP-5A) under the path `/<d>/index.html`, so that share links unfurl into cards without any server-side rendering. This is an optimization for web crawlers; the deck event above remains the source of truth.

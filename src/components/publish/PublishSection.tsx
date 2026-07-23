@@ -1,0 +1,139 @@
+import { useState } from 'react';
+import { RotateCcw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { CropMarks } from '@/components/CropMarks';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import type { usePdfPages } from '@/hooks/usePdfPages';
+import { asciiSlug, randomDeckId } from '@/lib/deckId';
+import { cn } from '@/lib/utils';
+import { DeckMetadataForm, type DeckMetadata } from './DeckMetadataForm';
+
+type PdfPages = ReturnType<typeof usePdfPages>;
+
+function titleFromFile(file: File | null): string {
+  if (!file) return '';
+  return file.name.replace(/\.pdf$/i, '').replace(/[_]+/g, ' ').trim();
+}
+
+function folio(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+/** Render with a `key` derived from the file so state reseeds per file. */
+export function PublishSection({ pdf, onReset }: { pdf: PdfPages; onReset: () => void }) {
+  const { t } = useTranslation();
+  const [selected, setSelected] = useState(1);
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [meta, setMeta] = useState<DeckMetadata>(() => {
+    const title = titleFromFile(pdf.file);
+    return { title, summary: '', hashtags: '', slug: asciiSlug(title) || randomDeckId() };
+  });
+
+  const handleMetaChange = (next: DeckMetadata) => {
+    if (!slugTouched && next.title !== meta.title) {
+      const derived = asciiSlug(next.title);
+      if (derived) next = { ...next, slug: derived };
+    }
+    setMeta(next);
+  };
+
+  if (pdf.status === 'rendering') {
+    const { done, total } = pdf.progress;
+    return (
+      <section className="container flex flex-col items-center gap-6 py-24">
+        <p className="font-display text-2xl font-semibold">{t('publish.rendering')}</p>
+        <p className="font-mono text-sm tracking-widest text-muted-foreground">
+          {folio(done)} / {total > 0 ? folio(total) : '--'}
+        </p>
+        <Progress value={total > 0 ? (done / total) * 100 : 0} className="max-w-md" />
+      </section>
+    );
+  }
+
+  if (pdf.status === 'error') {
+    return (
+      <section className="container flex flex-col items-center gap-4 py-24 text-center">
+        <p className="font-display text-2xl font-semibold">{t('publish.errorTitle')}</p>
+        {pdf.errorKind === 'password' && (
+          <p className="text-sm text-muted-foreground">{t('publish.errorPassword')}</p>
+        )}
+        <Button variant="outline" onClick={onReset}>
+          <RotateCcw className="size-4" aria-hidden />
+          {t('publish.tryAgain')}
+        </Button>
+      </section>
+    );
+  }
+
+  const current = pdf.previews.find((p) => p.pageNumber === selected) ?? pdf.previews[0];
+  const total = pdf.previews.length;
+
+  return (
+    <section className="container grid gap-10 py-10 lg:grid-cols-12 lg:gap-14">
+      <div className="order-2 lg:order-1 lg:col-span-4">
+        <h1 className="font-display text-2xl font-bold">{t('publish.formTitle')}</h1>
+        <div className="mt-6">
+          <DeckMetadataForm
+            value={meta}
+            onChange={handleMetaChange}
+            onSlugEdited={() => setSlugTouched(true)}
+          />
+        </div>
+        <div className="mt-8 space-y-3">
+          <Button className="w-full bg-seal text-seal-foreground hover:bg-seal/90" disabled>
+            {t('publish.publishButton')}
+          </Button>
+          <p className="text-center text-xs text-muted-foreground">{t('publish.publishSoon')}</p>
+          <Button variant="ghost" className="w-full" onClick={onReset}>
+            <RotateCcw className="size-4" aria-hidden />
+            {t('publish.startOver')}
+          </Button>
+        </div>
+      </div>
+
+      <div className="order-1 lg:order-2 lg:col-span-8">
+        {current && (
+          <div className="relative mx-4 my-4 sm:mx-6">
+            <CropMarks />
+            <div className="relative bg-card shadow-[0_12px_32px_-16px_rgb(28_26_23/0.35)]">
+              <img
+                src={current.url}
+                alt={`${meta.title} — ${current.pageNumber}`}
+                className="block w-full"
+              />
+            </div>
+            <p className="mt-2 text-right font-mono text-[10px] tracking-widest text-muted-foreground">
+              {folio(current.pageNumber)} / {folio(total)}
+            </p>
+          </div>
+        )}
+
+        <h2 className="mt-6 border-b pb-2 font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground">
+          {t('publish.pages')} — {total}
+        </h2>
+        <ul className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+          {pdf.previews.map((page) => (
+            <li key={page.pageNumber}>
+              <button
+                type="button"
+                onClick={() => setSelected(page.pageNumber)}
+                className={cn(
+                  'block w-full border bg-card outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring',
+                  page.pageNumber === current?.pageNumber
+                    ? 'border-seal ring-1 ring-seal'
+                    : 'border-border hover:border-muted-foreground',
+                )}
+              >
+                <img src={page.url} alt={String(page.pageNumber)} className="block w-full" />
+              </button>
+              <p className="mt-1 text-center font-mono text-[10px] text-muted-foreground">
+                {folio(page.pageNumber)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}

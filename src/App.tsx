@@ -10,6 +10,7 @@ import { NostrSync } from '@/components/NostrSync';
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { NostrLoginProvider } from '@nostrify/react/login';
+import { NWCProvider } from '@/contexts/NWCContext';
 import { AppProvider } from '@/components/AppProvider';
 import { AppConfig } from '@/contexts/AppContext';
 import { APP_RELAYS } from '@/lib/appRelays';
@@ -53,12 +54,14 @@ export function App() {
           <NostrLoginProvider storageKey='nostr:login'>
             <NostrProvider>
               <NostrSync />
-              <TooltipProvider>
-                <Toaster />
-                <Suspense>
-                  <AppRouter />
-                </Suspense>
-              </TooltipProvider>
+              <NWCProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Suspense>
+                    <AppRouter />
+                  </Suspense>
+                </TooltipProvider>
+              </NWCProvider>
             </NostrProvider>
           </NostrLoginProvider>
         </QueryClientProvider>

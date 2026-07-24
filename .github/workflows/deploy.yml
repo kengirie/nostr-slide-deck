@@ -38,6 +38,8 @@ jobs:
           cache: npm
 
       - name: Install dependencies and build
+        env:
+          VITE_BASE: /nostr-slide-deck/
         run: |
           npm install
           npm run build

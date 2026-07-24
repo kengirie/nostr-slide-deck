@@ -56,6 +56,7 @@ export const en = {
     prevPage: 'Previous page',
     nextPage: 'Next page',
     fullscreen: 'Fullscreen',
+    shareOnX: 'Post on X',
   },
   staticViewer: {
     openInApp: 'Open in Kamishibai',

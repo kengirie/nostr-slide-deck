@@ -1,4 +1,5 @@
-import { Download } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Copy, Download } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -12,7 +13,35 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthor } from '@/hooks/useAuthor';
 import { useDeck } from '@/hooks/useDeck';
 import type { Deck } from '@/lib/deckEvent';
+import { deckGatewayUrl } from '@/lib/siteConfig';
 import NotFound from './NotFound';
+
+/** X's intent logo is overkill — a simple label button matches the print look. */
+function SharePanel({ deck }: { deck: Deck }) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+  const shareUrl = deckGatewayUrl(nip19.npubEncode(deck.pubkey), deck.identifier);
+  const intentUrl = `https://x.com/intent/post?text=${encodeURIComponent(deck.title)}&url=${encodeURIComponent(shareUrl)}`;
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button variant="outline" size="sm" onClick={copy}>
+        {copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
+        {copied ? t('publish.copied') : t('publish.copyLink')}
+      </Button>
+      <Button asChild variant="outline" size="sm">
+        <a href={intentUrl} target="_blank" rel="noreferrer">
+          {t('deck.shareOnX')}
+        </a>
+      </Button>
+    </div>
+  );
+}
 
 function AuthorCard({ pubkey }: { pubkey: string }) {
   const author = useAuthor(pubkey);
@@ -96,6 +125,7 @@ function DeckArticle({ deck }: { deck: Deck }) {
                 </a>
               </Button>
             </div>
+            <SharePanel deck={deck} />
           </div>
         </div>
       </div>

@@ -60,6 +60,7 @@ export const ja: Translation = {
     prevPage: '前のページ',
     nextPage: '次のページ',
     fullscreen: '全画面表示',
+    shareOnX: 'Xでシェア',
   },
   staticViewer: {
     openInApp: '紙芝居で開く',

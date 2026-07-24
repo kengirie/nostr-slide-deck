@@ -98,8 +98,8 @@ export function usePublishDeck() {
 
         const thumbUpload = await uploadToServers({
           blob: deck.thumbnail,
-          name: 'thumbnail.webp',
-          type: 'image/webp',
+          name: 'thumb.jpg',
+          type: 'image/jpeg',
           servers,
           signer: user.signer,
         });
@@ -173,7 +173,7 @@ export function usePublishDeck() {
             title: meta.title,
             summary: meta.summary,
             canonicalUrl: gatewayUrl,
-            ogImageUrl: `${gatewayUrl}thumb.webp`,
+            ogImageUrl: `${gatewayUrl}thumb.jpg`,
             pagePaths: pageUploads.map((_, i) => `pages/${String(i + 1).padStart(3, '0')}.webp`),
             pdfUrl: pdfUpload.url,
             appUrl: absoluteAppUrl(`${npub}/${meta.slug}`),
@@ -192,7 +192,7 @@ export function usePublishDeck() {
 
           const deckPaths: SitePath[] = [
             { path: `/${meta.slug}/index.html`, sha256: htmlUpload.sha256 },
-            { path: `/${meta.slug}/thumb.webp`, sha256: thumbUpload.sha256 },
+            { path: `/${meta.slug}/thumb.jpg`, sha256: thumbUpload.sha256 },
             ...pageUploads.map((page, i) => ({
               path: `/${meta.slug}/pages/${String(i + 1).padStart(3, '0')}.webp`,
               sha256: page.sha256,

@@ -48,11 +48,11 @@ function loadPdfjs(): Promise<typeof import('pdfjs-dist')> {
   return pdfjsPromise;
 }
 
-function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+function canvasToBlob(canvas: HTMLCanvasElement, type = 'image/webp'): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error('canvas.toBlob returned null'))),
-      'image/webp',
+      type,
       WEBP_QUALITY,
     );
   });
@@ -71,7 +71,8 @@ async function makeThumbnail(source: HTMLCanvasElement): Promise<Blob> {
   const w = source.width * scale;
   const h = source.height * scale;
   ctx.drawImage(source, (OG_WIDTH - w) / 2, (OG_HEIGHT - h) / 2, w, h);
-  const blob = await canvasToBlob(canvas);
+  // JPEG: some link-preview crawlers (LINE, older clients) don't render WebP og:images
+  const blob = await canvasToBlob(canvas, 'image/jpeg');
   canvas.width = 0;
   canvas.height = 0;
   return blob;

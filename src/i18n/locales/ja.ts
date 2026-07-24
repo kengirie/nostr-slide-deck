@@ -62,6 +62,12 @@ export const ja: Translation = {
     fullscreen: '全画面表示',
     shareOnX: 'Xでシェア',
   },
+  feed: {
+    recent: '新着デッキ',
+    mine: '自分のデッキ',
+    more: 'もっと見る',
+    empty: 'まだデッキがありません。上のシートにPDFを置いて最初の1冊を。',
+  },
   staticViewer: {
     openInApp: '紙芝居で開く',
   },

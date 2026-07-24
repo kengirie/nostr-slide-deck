@@ -58,6 +58,12 @@ export const en = {
     fullscreen: 'Fullscreen',
     shareOnX: 'Post on X',
   },
+  feed: {
+    recent: 'Recent decks',
+    mine: 'My decks',
+    more: 'Load more',
+    empty: 'No decks yet — drop a PDF above and be the first.',
+  },
   staticViewer: {
     openInApp: 'Open in Kamishibai',
   },

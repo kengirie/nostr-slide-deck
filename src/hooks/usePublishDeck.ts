@@ -2,10 +2,14 @@ import { useCallback, useState } from 'react';
 import { useNostr } from '@nostrify/react';
 import { nip19 } from 'nostr-tools';
 import type { DeckMetadata } from '@/components/publish/DeckMetadataForm';
+import { useTranslation } from 'react-i18next';
 import { getEffectiveBlossomServers } from '@/lib/appBlossom';
 import { uploadToServers, type BlossomServerResult } from '@/lib/blossomMulti';
 import { DECK_KIND, buildDeckEvent, parseHashtagInput } from '@/lib/deckEvent';
+import { ROOT_SITE_KIND, buildRootManifest, buildServerList, type SitePath } from '@/lib/nsite';
 import type { RenderedDeck } from '@/lib/pdfRender';
+import { LOOKUP_RELAYS, absoluteAppUrl, deckGatewayUrl } from '@/lib/siteConfig';
+import { renderStaticViewerHtml } from '@/lib/staticViewer';
 import { useAppContext } from './useAppContext';
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
@@ -15,10 +19,14 @@ export interface PublishResult {
   identifier: string;
   pubkey: string;
   npub: string;
+  /** Share URL on the nsite gateway; absent when the mirror step failed */
+  gatewayUrl?: string;
+  /** Human-readable warning when the static mirror could not be published */
+  mirrorError?: string;
 }
 
 interface PublishState {
-  step: 'idle' | 'uploading' | 'publishing' | 'done' | 'error';
+  step: 'idle' | 'uploading' | 'publishing' | 'mirroring' | 'done' | 'error';
   uploaded: number;
   totalUploads: number;
   /** Servers that rejected at least one blob (upload still succeeded elsewhere) */
@@ -42,11 +50,12 @@ export interface PublishDeckArgs {
   meta: DeckMetadata;
 }
 
-/** Orchestrates upload → deck event, entirely in the browser. */
+/** Orchestrates upload → deck event → static nsite mirror, entirely in the browser. */
 export function usePublishDeck() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { config } = useAppContext();
+  const { t } = useTranslation();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const [state, setState] = useState<PublishState>(IDLE);
 
@@ -143,6 +152,7 @@ export function usePublishDeck() {
         });
         await publishEvent(template);
 
+        const npub = nip19.npubEncode(user.pubkey);
         const result: PublishResult = {
           naddr: nip19.naddrEncode({
             kind: DECK_KIND,
@@ -151,8 +161,84 @@ export function usePublishDeck() {
           }),
           identifier: meta.slug,
           pubkey: user.pubkey,
-          npub: nip19.npubEncode(user.pubkey),
+          npub,
         };
+
+        // Static nsite mirror for OG cards. Failures here must not kill the
+        // publish — the deck is already live in-app.
+        setState((prev) => ({ ...prev, step: 'mirroring' }));
+        try {
+          const gatewayUrl = deckGatewayUrl(npub, meta.slug);
+          const html = renderStaticViewerHtml({
+            title: meta.title,
+            summary: meta.summary,
+            canonicalUrl: gatewayUrl,
+            ogImageUrl: `${gatewayUrl}thumb.webp`,
+            pagePaths: pageUploads.map((_, i) => `pages/${String(i + 1).padStart(3, '0')}.webp`),
+            pdfUrl: pdfUpload.url,
+            appUrl: absoluteAppUrl(`${npub}/${meta.slug}`),
+            labels: {
+              openInApp: t('staticViewer.openInApp'),
+              downloadPdf: t('deck.downloadPdf'),
+            },
+          });
+          const htmlUpload = await uploadToServers({
+            blob: new Blob([html], { type: 'text/html' }),
+            name: 'index.html',
+            type: 'text/html',
+            servers,
+            signer: user.signer,
+          });
+
+          const deckPaths: SitePath[] = [
+            { path: `/${meta.slug}/index.html`, sha256: htmlUpload.sha256 },
+            { path: `/${meta.slug}/thumb.webp`, sha256: thumbUpload.sha256 },
+            ...pageUploads.map((page, i) => ({
+              path: `/${meta.slug}/pages/${String(i + 1).padStart(3, '0')}.webp`,
+              sha256: page.sha256,
+            })),
+          ];
+
+          let existing = null;
+          try {
+            const [event] = await nostr.query(
+              [{ kinds: [ROOT_SITE_KIND], authors: [user.pubkey], limit: 1 }],
+              { signal: AbortSignal.timeout(3000) },
+            );
+            existing = event ?? null;
+          } catch {
+            // Treat as no existing nsite
+          }
+
+          const manifest = await publishEvent(
+            await buildRootManifest(existing, meta.slug, deckPaths, servers),
+          );
+
+          // Gateways discover the user's Blossom servers via kind 10063;
+          // publish one if the user has none yet.
+          let serverList = null;
+          if (config.blossomServerMetadata.updatedAt === 0) {
+            serverList = await publishEvent(buildServerList(servers));
+          }
+
+          // Best-effort copies to the gateway ecosystem's lookup relays
+          for (const event of [manifest, serverList]) {
+            if (!event) continue;
+            try {
+              await nostr.event(event, {
+                relays: LOOKUP_RELAYS,
+                signal: AbortSignal.timeout(5000),
+              });
+            } catch {
+              // Lookup relays are an optimization only
+            }
+          }
+
+          result.gatewayUrl = gatewayUrl;
+        } catch (err) {
+          result.mirrorError = err instanceof Error ? err.message : String(err);
+        }
+
         setState((prev) => ({ ...prev, step: 'done', result }));
       } catch (err) {
         setState((prev) => ({
@@ -162,7 +248,7 @@ export function usePublishDeck() {
         }));
       }
     },
-    [user, config.blossomServerMetadata, config.useAppBlossomServers, nostr, publishEvent],
+    [user, config.blossomServerMetadata, config.useAppBlossomServers, nostr, publishEvent, t],
   );
 
   return { ...state, publish, reset };
